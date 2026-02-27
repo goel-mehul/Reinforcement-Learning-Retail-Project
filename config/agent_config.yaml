@@ -1,0 +1,98 @@
+# ─────────────────────────────────────────
+# Agent Configuration
+# ─────────────────────────────────────────
+
+# Maps each retailer to its algorithm and reward function
+agents:
+  walmart:
+    algorithm: dqn
+    reward: pure_revenue
+    brand_loyalty_bonus: 0.08
+
+  target:
+    algorithm: dqn
+    reward: profit_margin
+    brand_loyalty_bonus: 0.06
+
+  amazon_fresh:
+    algorithm: dqn
+    reward: market_share
+    brand_loyalty_bonus: 0.05
+
+  qfc:
+    algorithm: ppo
+    reward: revenue_with_inventory
+    brand_loyalty_bonus: 0.04
+
+  safeway:
+    algorithm: ppo
+    reward: long_term_value
+    brand_loyalty_bonus: 0.05
+
+  kroger:
+    algorithm: ppo
+    reward: promo_aware_profit
+    brand_loyalty_bonus: 0.05
+
+  trader_joes:
+    algorithm: a2c
+    reward: premium_floor
+    brand_loyalty_bonus: 0.10
+    price_floor_pct: 0.85      # never price below 85% of base retail
+
+  whole_foods:
+    algorithm: a2c
+    reward: prestige_reward
+    brand_loyalty_bonus: 0.12
+    price_floor_pct: 0.90
+
+  aldi:
+    algorithm: qtable
+    reward: discount_maximization
+    brand_loyalty_bonus: 0.03
+
+  costco:
+    algorithm: qtable
+    reward: bulk_volume
+    brand_loyalty_bonus: 0.06
+
+# ─────────────────────────────────────────
+# Hyperparameters per algorithm
+# ─────────────────────────────────────────
+
+dqn:
+  learning_rate: 0.0003
+  batch_size: 64
+  buffer_size: 100000
+  gamma: 0.99                  # discount factor
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay: 0.995
+  target_update_freq: 100      # episodes between target network updates
+  hidden_dims: [256, 256]
+
+ppo:
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95             # generalized advantage estimation
+  clip_range: 0.2
+  hidden_dims: [256, 256]
+
+a2c:
+  learning_rate: 0.0007
+  n_steps: 5
+  gamma: 0.99
+  gae_lambda: 1.0
+  hidden_dims: [128, 128]
+
+qtable:
+  learning_rate: 0.1
+  gamma: 0.99
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.995
+  n_price_bins: 10             # discretize price action space into 10 bins
+  n_state_bins: 5              # discretize each state dimension into 5 bins
