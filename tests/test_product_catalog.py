@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from env.product_catalog import Product, ProductCatalog
+from environment.product_catalog import Product, ProductCatalog
 
 
 class TestProduct:

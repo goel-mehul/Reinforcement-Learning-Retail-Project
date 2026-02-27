@@ -1,6 +1,6 @@
 import pytest
-from env.product_catalog import ProductCatalog
-from env.inventory import InventoryManager, InventoryState
+from environment.product_catalog import ProductCatalog
+from environment.inventory import InventoryManager, InventoryState
 
 
 @pytest.fixture

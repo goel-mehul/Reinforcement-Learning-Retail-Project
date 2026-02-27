@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-from env.product_catalog import ProductCatalog
-from env.demand_model import MNLDemandModel, DemandResult
+from environment.product_catalog import ProductCatalog
+from environment.demand_model import MNLDemandModel, DemandResult
 
 
 @pytest.fixture

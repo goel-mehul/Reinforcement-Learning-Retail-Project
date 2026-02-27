@@ -18,7 +18,7 @@ dev = ["pytest", "pytest-cov", "black", "ruff"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["env*", "agents*", "utils*"]
+include = ["environment*", "agents*", "utils*"]
 
 [tool.black]
 line-length = 88
