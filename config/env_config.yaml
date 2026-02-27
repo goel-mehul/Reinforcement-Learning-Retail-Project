@@ -12,11 +12,11 @@ environment:
 # Product categories and how many products per category
 products:
   categories:
-    dairy: 10
     produce: 12
-    meat: 8
+    dairy_eggs: 12
     snacks: 10
     beverages: 10
+    frozen: 6
   price_range:
     min: 0.99
     max: 49.99
@@ -28,7 +28,9 @@ products:
 demand:
   base_daily_customers: 10000   # total market size per day
   price_sensitivity: 2.5        # higher = consumers more sensitive to price
-  brand_loyalty: 0.15           # probability consumer ignores price and stays loyal
+  brand_loyalty: 0.59          # probability consumer ignores price and stays loyal
+  mean_basket_size: 10         # added — from real data
+  noise_std: 0.05
   quality_bias:                 # some retailers get a baseline demand bonus
     whole_foods: 0.12
     trader_joes: 0.10
@@ -53,7 +55,7 @@ supply_chain:
 
 # Promotional cycles
 promotions:
-  weekend_demand_multiplier: 1.3
+  weekend_demand_multiplier: 1.347
   holiday_periods:             # day ranges with elevated demand
     - {start: 320, end: 335, multiplier: 1.8}   # Thanksgiving/Black Friday
     - {start: 350, end: 365, multiplier: 2.0}   # Christmas/New Year
@@ -61,3 +63,4 @@ promotions:
   promo_discount_range:
     min: 0.05
     max: 0.30
+
