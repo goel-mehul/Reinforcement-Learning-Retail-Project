@@ -142,17 +142,12 @@ class PPOAgent(BaseRLAgent):
         with torch.no_grad():
             actions, log_prob, _, value = self.net.get_action(obs_t)
 
-        action_np   = actions.squeeze(0).cpu().numpy()
-        log_prob_np = log_prob.squeeze(0).cpu().item()
-        value_np    = value.squeeze(0).cpu().item()
+        self._last_obs      = obs
+        self._last_action   = actions.squeeze(0).cpu().numpy()
+        self._last_log_prob = log_prob.squeeze(0).cpu().item()
+        self._last_value    = value.squeeze(0).cpu().item()
 
-        # store for rollout
-        self.rollout["obs"].append(obs)
-        self.rollout["actions"].append(action_np)
-        self.rollout["log_probs"].append(log_prob_np)
-        self.rollout["values"].append(value_np)
-
-        return action_np
+        return self._last_action
 
     def learn(
         self,
@@ -160,10 +155,11 @@ class PPOAgent(BaseRLAgent):
         done:   bool,
         next_obs: Optional[np.ndarray] = None,
     ) -> Optional[Dict[str, float]]:
-        """
-        Store reward and done flag. When rollout buffer is full,
-        compute GAE advantages and run PPO update.
-        """
+        # store transition using values from last act()
+        self.rollout["obs"].append(self._last_obs)
+        self.rollout["actions"].append(self._last_action)
+        self.rollout["log_probs"].append(self._last_log_prob)
+        self.rollout["values"].append(self._last_value)
         self.rollout["rewards"].append(reward)
         self.rollout["dones"].append(float(done))
 

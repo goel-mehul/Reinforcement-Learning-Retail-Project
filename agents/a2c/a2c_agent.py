@@ -98,16 +98,19 @@ class A2CAgent(BaseRLAgent):
         obs_t = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
         with torch.no_grad():
             logits, value = self.net(obs_t)
-            dist    = Categorical(logits=logits)
-            actions = dist.sample()
+            dist     = Categorical(logits=logits)
+            actions  = dist.sample()
             log_prob = dist.log_prob(actions).sum(dim=-1)
 
-        self.buf["obs"].append(obs)
-        self.buf["actions"].append(actions.squeeze(0).cpu().numpy())
-        self.buf["values"].append(value.item())
-        self.buf["log_probs"].append(log_prob.item())
+        action_np = actions.squeeze(0).cpu().numpy()
 
-        return actions.squeeze(0).cpu().numpy()
+        # store for use in learn()
+        self._last_obs      = obs
+        self._last_action   = action_np
+        self._last_value    = value.item()
+        self._last_log_prob = log_prob.item()
+
+        return action_np
 
     def learn(
         self,
@@ -115,6 +118,11 @@ class A2CAgent(BaseRLAgent):
         done:     bool,
         next_obs: Optional[np.ndarray] = None,
     ) -> Optional[Dict[str, float]]:
+        # store transition now using values captured in act()
+        self.buf["obs"].append(self._last_obs)
+        self.buf["actions"].append(self._last_action)
+        self.buf["values"].append(self._last_value)
+        self.buf["log_probs"].append(self._last_log_prob)
         self.buf["rewards"].append(reward)
         self.buf["dones"].append(float(done))
 
