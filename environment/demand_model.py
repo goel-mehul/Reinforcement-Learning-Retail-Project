@@ -180,10 +180,17 @@ class MNLDemandModel:
         weights = weights / weights.sum()   # normalize to probabilities
 
         # sample without replacement (customer buys each product at most once)
-        n_sample  = min(basket_size, self.n_products)
+        n_sample = min(basket_size, self.n_products)
+        # use faster replacement sampling for large customer counts
         chosen_ix = self.rng.choice(self.n_products, size=n_sample,
-                                    replace=False, p=weights)
-        return [self.all_products[i] for i in chosen_ix]
+                                    replace=True, p=weights)
+        seen = set()
+        unique_ix = []
+        for ix in chosen_ix:
+            if ix not in seen:
+                seen.add(ix)
+                unique_ix.append(ix)
+        return [self.all_products[i] for i in unique_ix]
 
     def _compute_basket_costs(
         self,

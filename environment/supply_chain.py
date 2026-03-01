@@ -195,7 +195,7 @@ class SupplyChain:
                 "base_lead":  base_lead,
                 "actual_lead": disrupted_lead,
             })
-            logger.warning(
+            logger.debug(
                 f"Supply disruption! agent={agent_id} product={product_id} "
                 f"lead_time={base_lead}d -> {disrupted_lead}d"
             )

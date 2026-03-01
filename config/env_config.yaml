@@ -50,7 +50,7 @@ inventory:
 supply_chain:
   lead_time_min: 2              # days
   lead_time_max: 7              # days
-  disruption_probability: 0.02  # chance of supply disruption per day
+  disruption_probability: 0.0001  # chance of supply disruption per day
   disruption_multiplier: 3.0    # disruption multiplies lead time by this
 
 # Promotional cycles
