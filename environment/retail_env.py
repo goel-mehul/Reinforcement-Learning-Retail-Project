@@ -138,12 +138,22 @@ class RetailEnv(AECEnv):
         """Reset environment to start of new episode."""
         if seed is not None:
             np.random.seed(seed)
+        else:
+            if not hasattr(self, '_episode_count'):
+                self._episode_count = 0
+            np.random.seed(self._episode_count)
+
+        if not hasattr(self, '_episode_count'):
+            self._episode_count = 0
+        self._episode_count += 1
 
         self.agents    = list(self.possible_agents)
         self.current_day = 0
 
         self.inv.reset()
         self.sc.reset()
+        self.demand.rng = np.random.default_rng(self._episode_count * 1000)
+        self.demand.episode_seed = self._episode_count * 1000
 
         # initialize prices at base retail for all agents
         self.current_prices = {

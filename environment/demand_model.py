@@ -57,6 +57,7 @@ class MNLDemandModel:
         self.catalog = catalog
         self.config  = config or load_env_config()
         self.rng     = np.random.default_rng(seed)
+        self.episode_seed = 0
 
         # demand parameters
         self.base_daily_customers = self.config.get('demand.base_daily_customers', 10000)
@@ -108,6 +109,8 @@ class MNLDemandModel:
         Returns:
             DemandResult with per-agent units, revenue, market shares, visits
         """
+        # vary randomness per episode
+        rng = np.random.default_rng(self.episode_seed + day)
         agent_ids      = list(prices.keys())
         daily_customers = self._get_daily_customers(
             is_weekend, is_holiday, holiday_multiplier
