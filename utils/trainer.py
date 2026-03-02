@@ -10,6 +10,18 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+REWARD_SCALE = {
+    'pure_revenue':            1/50000,
+    'profit_margin':           1/20000,
+    'market_share':            1/1000,
+    'revenue_with_inventory':  1/50000,
+    'long_term_value':         1/50000,
+    'promo_aware_profit':      1/20000,
+    'premium_floor':           1/20000,
+    'prestige_reward':         1/20000,
+    'discount_maximization':   1/50000,
+    'bulk_volume':             1/10000,
+}
 
 @dataclass
 class EpisodeResult:
@@ -76,7 +88,6 @@ class Trainer:
     def _run_episode(self, episode: int, training: bool) -> EpisodeResult:
         obs_dict, _ = self.env.reset()
 
-        # set training mode
         for agent in self.agents.values():
             if hasattr(agent, 'set_training'):
                 agent.set_training(training)
@@ -85,48 +96,42 @@ class Trainer:
 
         cumulative_rewards = {name: 0.0 for name in self.agents}
         training_metrics   = {name: {} for name in self.agents}
-        prev_obs           = {name: obs for name, obs in obs_dict.items()}
 
-        step = 0
+        # track per-agent last obs and action for learning
+        last_obs    = {}
+        last_action = {}
+
         for agent_name in self.env.agent_iter():
             obs, reward, term, trunc, info = self.env.last()
             done = term or trunc
-
             agent = self.agents[agent_name]
+
+            # learn from previous step's reward if we have one
+            if training and agent_name in last_obs and reward != 0.0:
+                metrics = self._learn_step(
+                    agent_name, agent,
+                    last_obs[agent_name],
+                    last_action.get(agent_name, np.zeros(50, dtype=int)),
+                    reward, obs, done
+                )
+                if metrics:
+                    training_metrics[agent_name] = metrics
+
+            cumulative_rewards[agent_name] += reward
 
             if done:
                 self.env.step(None)
                 continue
 
-            # get action
             action = agent.act(obs)
+            last_obs[agent_name]    = obs
+            last_action[agent_name] = action
             self.env.step(action)
 
-            # update cumulative reward
-            cumulative_rewards[agent_name] += reward
-
-            # learn (only RL agents, only when training)
-            if training and reward != 0.0:
-                metrics = self._learn_step(
-                    agent_name, agent, prev_obs[agent_name],
-                    action, reward, obs, done
-                )
-                if metrics:
-                    training_metrics[agent_name] = metrics
-
-            prev_obs[agent_name] = obs
-            step += 1
-
-        # collect final episode metrics
-        final_metrics = self.env.episode_metrics
-        avg_shares  = {
-            self.env.AGENT_NAMES[m['market_shares'].keys().__iter__().__next__()]: 0.0
-            for m in final_metrics[:1]
-        } if final_metrics else {}
-
-        # aggregate market shares and revenues over episode
+        # aggregate metrics
         market_shares = {}
         revenues      = {}
+        final_metrics = self.env.episode_metrics
         if final_metrics:
             for name in self.env.AGENT_NAMES:
                 aid = self.env._agent_ids[name]
@@ -144,7 +149,6 @@ class Trainer:
             training_metrics=training_metrics,
         )
 
-        # on_episode_end callbacks
         for name, agent in self.agents.items():
             if hasattr(agent, 'on_episode_end'):
                 agent.on_episode_end(cumulative_rewards.get(name, 0.0))
@@ -160,12 +164,16 @@ class Trainer:
         from agents.a2c.a2c_agent import A2CAgent
         from agents.qtable.qtable_agent import QTableAgent
 
+        # scale reward to consistent magnitude before passing to agent
+        reward_fn = getattr(agent, 'reward_fn', None)
+        scaled_reward = reward * REWARD_SCALE.get(reward_fn, 1.0)
+
         if isinstance(agent, DQNAgent):
-            return agent.learn(obs, action, reward, next_obs, done)
+            return agent.learn(obs, action, scaled_reward, next_obs, done)
         elif isinstance(agent, (PPOAgent, A2CAgent)):
-            return agent.learn(reward=reward, done=done, next_obs=next_obs)
+            return agent.learn(reward=scaled_reward, done=done, next_obs=next_obs)
         elif isinstance(agent, QTableAgent):
-            return agent.learn(reward=reward, done=done, next_obs=next_obs)
+            return agent.learn(reward=scaled_reward, done=done, next_obs=next_obs)
         return None
 
     def _save_checkpoints(self, episode: int):
