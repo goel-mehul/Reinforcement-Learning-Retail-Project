@@ -4,16 +4,27 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 
 from agents.base_agent import BaseRLAgent
 from agents.registry import register
+from agents.opponent_encoder import OpponentEncoder
 
 
 class A2CNetwork(nn.Module):
     """
-    Actor-Critic network for A2C.
-    Simpler than PPO — no clipping, updates every step.
+    Actor-Critic network for A2C with opponent modeling.
+
+    Architecture:
+        1. OpponentEncoder processes competitor prices (50:500) → embedding (64,)
+        2. Backbone processes full observation → features (128,)
+        3. Opponent embedding concatenated with backbone → (192,)
+        4. Actor head: (192,) → logits (n_products, n_actions)
+        5. Critic head: (192,) → scalar value
+
+    A2C uses a smaller backbone than PPO (128 vs 256 hidden dims)
+    since it updates more frequently (every n_steps=5 vs rollout=128).
+    The opponent encoder is the same size across all agents.
     """
 
     def __init__(self, obs_size: int, n_products: int, n_actions: int):
@@ -21,32 +32,41 @@ class A2CNetwork(nn.Module):
         self.n_products = n_products
         self.n_actions  = n_actions
 
+        self.opponent_encoder = OpponentEncoder()
+        opp_dim = OpponentEncoder.EMBEDDING_DIM  # 64
+
         self.backbone = nn.Sequential(
             nn.Linear(obs_size, 128),
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
         )
-        self.actor  = nn.Linear(128, n_products * n_actions)
-        self.critic = nn.Linear(128, 1)
+
+        combined_dim = 128 + opp_dim  # 192
+
+        self.actor  = nn.Linear(combined_dim, n_products * n_actions)
+        self.critic = nn.Linear(combined_dim, 1)
 
     def forward(self, x: torch.Tensor):
-        f      = self.backbone(x)
-        logits = self.actor(f).view(-1, self.n_products, self.n_actions)
-        value  = self.critic(f).squeeze(-1)
+        opp_emb  = self.opponent_encoder(x)                       # (batch, 64)
+        features = self.backbone(x)                               # (batch, 128)
+        combined = torch.cat([features, opp_emb], dim=-1)         # (batch, 192)
+        logits   = self.actor(combined).view(-1, self.n_products, self.n_actions)
+        value    = self.critic(combined).squeeze(-1)
         return logits, value
 
 
 @register("a2c")
 class A2CAgent(BaseRLAgent):
     """
-    Advantage Actor-Critic agent.
+    Advantage Actor-Critic agent with opponent modeling.
 
     Updates every n_steps using n-step returns.
     Simpler than PPO: no replay buffer, no clipping.
     Faster iteration but higher variance.
 
-    Assigned to: Amazon Fresh (market_share reward)
+    Assigned to: Amazon Fresh (market_share), Kroger (promo_aware_profit),
+                 Aldi (discount_maximization)
     """
 
     def __init__(
@@ -63,26 +83,25 @@ class A2CAgent(BaseRLAgent):
 
         torch.manual_seed(seed)
 
-        self.lr        = config.get('lr',        7e-4)
-        self.gamma     = config.get('gamma',     0.99)
-        self.vf_coef   = config.get('vf_coef',   0.5)
-        self.ent_coef  = config.get('ent_coef',  0.01)
-        self.max_grad  = config.get('max_grad',  0.5)
-        self.n_steps   = config.get('n_steps',   5)
-        self.n_actions = 7
+        self.lr          = config.get('lr',          7e-4)
+        self.gamma       = config.get('gamma',       0.99)
+        self.vf_coef     = config.get('vf_coef',     0.5)
+        self.ent_coef    = config.get('ent_coef',    0.01)
+        self.max_grad    = config.get('max_grad',    0.5)
+        self.n_steps     = config.get('n_steps',     5)
+        self.reward_clip = config.get('reward_clip', 1.0)
+        self.n_actions   = 7
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.net       = A2CNetwork(obs_size, n_products, self.n_actions).to(self.device)
-        self.optimizer = optim.RMSprop(
-            self.net.parameters(), lr=self.lr, eps=1e-5, alpha=0.99
-        )
+        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=1e-5)
 
         self._reset_buffer()
 
         self.logger.info(
             f"A2C initialized | device={self.device} | "
-            f"lr={self.lr} | n_steps={self.n_steps}"
+            f"lr={self.lr} | n_steps={self.n_steps} | opponent_encoder=True"
         )
 
     def _reset_buffer(self):
@@ -102,15 +121,12 @@ class A2CAgent(BaseRLAgent):
             actions  = dist.sample()
             log_prob = dist.log_prob(actions).sum(dim=-1)
 
-        action_np = actions.squeeze(0).cpu().numpy()
-
-        # store for use in learn()
         self._last_obs      = obs
-        self._last_action   = action_np
+        self._last_action   = actions.squeeze(0).cpu().numpy()
         self._last_value    = value.item()
         self._last_log_prob = log_prob.item()
 
-        return action_np
+        return self._last_action
 
     def learn(
         self,
@@ -118,7 +134,8 @@ class A2CAgent(BaseRLAgent):
         done:     bool,
         next_obs: Optional[np.ndarray] = None,
     ) -> Optional[Dict[str, float]]:
-        # store transition now using values captured in act()
+        reward = float(np.clip(reward, -self.reward_clip, self.reward_clip))
+
         self.buf["obs"].append(self._last_obs)
         self.buf["actions"].append(self._last_action)
         self.buf["values"].append(self._last_value)
@@ -136,7 +153,6 @@ class A2CAgent(BaseRLAgent):
         values  = np.array(self.buf["values"],  dtype=np.float32)
         dones   = np.array(self.buf["dones"],   dtype=np.float32)
 
-        # bootstrap
         if next_obs is not None and not done:
             next_t = torch.FloatTensor(
                 self.preprocess_obs(next_obs)
@@ -166,9 +182,9 @@ class A2CAgent(BaseRLAgent):
         log_prob = dist.log_prob(act_t).sum(dim=-1)
         entropy  = dist.entropy().sum(dim=-1).mean()
 
-        pg_loss  = -(log_prob * adv_t).mean()
-        vf_loss  = nn.MSELoss()(values_pred, ret_t)
-        loss     = pg_loss + self.vf_coef * vf_loss - self.ent_coef * entropy
+        pg_loss = -(log_prob * adv_t).mean()
+        vf_loss = nn.MSELoss()(values_pred, ret_t)
+        loss    = pg_loss + self.vf_coef * vf_loss - self.ent_coef * entropy
 
         self.optimizer.zero_grad()
         loss.backward()

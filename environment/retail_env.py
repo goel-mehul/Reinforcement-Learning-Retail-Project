@@ -11,6 +11,7 @@ from environment.supply_chain import SupplyChain
 from environment.promotions import PromotionCalendar
 from utils.config_loader import load_env_config, load_agent_config
 from utils.logger import get_logger
+from collections import deque
 
 logger = get_logger(__name__)
 
@@ -97,11 +98,14 @@ class RetailEnv(AECEnv):
 
         # spaces
         obs_size = (
-            self.n_products * 5 +   # prices, comp prices, stock, stockout, pipeline
-            5 +                      # promo vector
-            1 +                      # day normalized
-            self.n_agents_count      # agent id one-hot
-        )
+            self.n_products +                            # own prices:       50
+            self.n_products * (self.n_agents_count - 1) + # comp prices:    450
+            self.n_products * 3 +                        # stock/out/pipe:  150
+            5 +                                          # promo:             5
+            1 +                                          # day:               1
+            self.n_agents_count +                        # one-hot:          10
+            self.n_products                              # momentum:         50
+        )  # = 716
         self.observation_spaces = {
             agent: spaces.Box(
                 low=0.0, high=10.0,
@@ -113,6 +117,10 @@ class RetailEnv(AECEnv):
         self.action_spaces = {
             agent: spaces.MultiDiscrete([N_ACTIONS] * self.n_products)
             for agent in self.agents
+        }
+
+        self._price_history = {
+            i: deque(maxlen=3) for i in range(self.n_agents_count)
         }
 
         # state — initialized in reset()
@@ -394,41 +402,67 @@ class RetailEnv(AECEnv):
     # ── Observation builder ───────────────────────────────────────
 
     def _get_observation(self, agent: str) -> np.ndarray:
-        """Build the 266-dimensional observation vector for an agent."""
+        """Build the observation vector for an agent.
+        
+        Dimensions:
+            own prices:              50  (normalized by base retail)
+            competitor prices:      450  (9 competitors × 50 products, individual)
+            stock levels:            50
+            stockout flags:          50
+            pipeline incoming:       50
+            promo vector:             5
+            day normalized:           1
+            agent one-hot:           10
+            price momentum (3 days): 50  (own prices from last 3 days avg)
+            ----------------------------------
+            Total:                  716
+        """
         aid = self._agent_ids[agent]
 
-        # own prices normalized
+        # own prices normalized (50)
         own_prices = np.array([
             self.current_prices[aid][p.product_id] / p.base_retail_price
             for p in self.catalog.get_all_products()
         ], dtype=np.float32)
 
-        # competitor average prices normalized
+        # individual competitor prices (9 * 50 = 450)
         other_ids = [i for i in range(self.n_agents_count) if i != aid]
-        comp_prices = np.array([
-            np.mean([self.current_prices[o][p.product_id] for o in other_ids])
-            / p.base_retail_price
-            for p in self.catalog.get_all_products()
-        ], dtype=np.float32)
+        comp_prices_list = []
+        for other_id in other_ids:
+            for p in self.catalog.get_all_products():
+                price = self.current_prices[other_id][p.product_id]
+                comp_prices_list.append(price / p.base_retail_price)
+        comp_prices = np.array(comp_prices_list, dtype=np.float32)
 
-        # inventory
-        stock_vec   = self.inv.get_stock_vector(aid)
+        # inventory (50 each)
+        stock_vec    = self.inv.get_stock_vector(aid)
         stockout_vec = self.inv.get_stockout_vector(aid)
         pipeline_vec = self.sc.get_pipeline_vector(aid, list(range(self.n_products)))
 
-        # promo
+        # promo (5)
         promo_vec = self.promo_cal.get_observation_vector(self.current_day)
 
-        # time
+        # time (1)
         day_norm = np.array([self.current_day / self.episode_length], dtype=np.float32)
 
-        # agent identity one-hot
+        # agent identity one-hot (10)
         agent_onehot = np.zeros(self.n_agents_count, dtype=np.float32)
         agent_onehot[aid] = 1.0
 
+        # price momentum — avg of own prices over last 3 days (50)
+        if len(self._price_history[aid]) >= 3:
+            recent = list(self._price_history[aid])[-3:]
+            momentum = np.mean([
+                np.array([h[p.product_id] / p.base_retail_price
+                        for p in self.catalog.get_all_products()])
+                for h in recent
+            ], axis=0).astype(np.float32)
+        else:
+            momentum = own_prices.copy()
+
         return np.concatenate([
             own_prices, comp_prices, stock_vec, stockout_vec,
-            pipeline_vec, promo_vec, day_norm, agent_onehot
+            pipeline_vec, promo_vec, day_norm, agent_onehot, momentum
         ])
 
     def _render_human(self):
