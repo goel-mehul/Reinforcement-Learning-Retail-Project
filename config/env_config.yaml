@@ -8,6 +8,7 @@ environment:
   num_products: 50
   episode_length: 365        # one simulated year per episode (days)
   seed: 42
+  obs_size: 716
 
 # Product categories and how many products per category
 products:
