@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from pathlib import Path
-import pickle
 import json
 
 # ── Page config ───────────────────────────────────────────────────────────────
@@ -27,10 +26,7 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Serif:wght@400;600&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'IBM Plex Sans', sans-serif;
-}
-
+html, body, [class*="css"] { font-family: 'IBM Plex Sans', sans-serif; }
 .stApp { background: #13131a; color: #d4d4e0; }
 
 [data-testid="stSidebar"] {
@@ -38,106 +34,65 @@ html, body, [class*="css"] {
     border-right: 1px solid #2a2a38 !important;
 }
 [data-testid="stSidebar"] * { color: #d4d4e0 !important; }
-
 .block-container { padding-top: 2rem; padding-bottom: 4rem; }
 
-/* Hero */
 .hero-eyebrow {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: #6b6b88;
-    margin-bottom: 10px;
+    font-size: 0.68rem; letter-spacing: 3px;
+    text-transform: uppercase; color: #6b6b88; margin-bottom: 10px;
 }
 .hero-title {
     font-family: 'IBM Plex Serif', serif;
-    font-size: 2.6rem;
-    font-weight: 600;
-    color: #e8e8f0;
-    letter-spacing: -0.5px;
-    line-height: 1.1;
-    margin-bottom: 10px;
+    font-size: 2.6rem; font-weight: 600; color: #e8e8f0;
+    letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 10px;
 }
 .hero-desc {
-    font-size: 0.95rem;
-    color: #8a8aa0;
-    line-height: 1.75;
-    max-width: 680px;
+    font-size: 0.95rem; color: #8a8aa0;
+    line-height: 1.75; max-width: 680px;
 }
 
-/* Section headers */
 .section-title {
     font-family: 'IBM Plex Serif', serif;
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: #e0e0f0;
-    margin: 36px 0 16px 0;
-    padding-bottom: 10px;
+    font-size: 1.15rem; font-weight: 600; color: #e0e0f0;
+    margin: 36px 0 16px 0; padding-bottom: 10px;
     border-bottom: 1px solid #2a2a38;
 }
 
-/* Metric cards */
 .metric-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
 .metric-card {
     flex: 1; min-width: 120px;
-    background: #1a1a24;
-    border: 1px solid #2a2a38;
-    border-radius: 5px;
-    padding: 16px 20px;
+    background: #1a1a24; border: 1px solid #2a2a38;
+    border-radius: 5px; padding: 16px 20px;
 }
 .metric-value {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: #c8c8e0;
-    line-height: 1;
-    margin-bottom: 6px;
+    font-size: 1.5rem; font-weight: 500; color: #c8c8e0;
+    line-height: 1; margin-bottom: 6px;
 }
 .metric-label {
-    font-size: 0.7rem;
-    font-family: 'IBM Plex Mono', monospace;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #5a5a78;
+    font-size: 0.7rem; font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1.5px; text-transform: uppercase; color: #5a5a78;
 }
 
-/* Sidebar */
 .sidebar-label {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #4a4a60;
-    margin: 20px 0 10px 0;
+    font-size: 0.62rem; letter-spacing: 2px;
+    text-transform: uppercase; color: #4a4a60; margin: 20px 0 10px 0;
 }
 .agent-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
+    display: flex; justify-content: space-between;
+    align-items: center; padding: 6px 0;
     border-bottom: 1px solid #1e1e2c;
 }
 .agent-name { font-size: 0.85rem; font-weight: 500; }
-.agent-algo {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    color: #5a5a78;
-}
+.agent-algo { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: #5a5a78; }
 
-/* Tabs */
-.stTabs [data-baseweb="tab-list"] {
-    background: transparent;
-    border-bottom: 1px solid #2a2a38;
-}
+.stTabs [data-baseweb="tab-list"] { background: transparent; border-bottom: 1px solid #2a2a38; }
 .stTabs [data-baseweb="tab"] {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #5a5a78;
-    padding: 10px 20px;
-    background: transparent;
+    font-size: 0.7rem; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #5a5a78;
+    padding: 10px 20px; background: transparent;
 }
 .stTabs [aria-selected="true"] {
     color: #a0a8c0 !important;
@@ -145,59 +100,36 @@ html, body, [class*="css"] {
     background: transparent !important;
 }
 
-/* Slider + select */
 .stSlider label, .stSelectbox label {
     font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 0.68rem !important;
-    letter-spacing: 1.5px !important;
-    text-transform: uppercase !important;
-    color: #5a5a78 !important;
+    font-size: 0.68rem !important; letter-spacing: 1.5px !important;
+    text-transform: uppercase !important; color: #5a5a78 !important;
 }
 
-/* Callout box */
 .callout {
-    background: #1a1a24;
-    border: 1px solid #2a2a38;
-    border-radius: 5px;
-    padding: 14px 18px;
-    font-size: 0.88rem;
-    color: #8a8aa8;
-    line-height: 1.7;
-    margin-bottom: 20px;
+    background: #1a1a24; border: 1px solid #2a2a38; border-radius: 5px;
+    padding: 14px 18px; font-size: 0.88rem; color: #8a8aa8;
+    line-height: 1.7; margin-bottom: 20px;
 }
-
-/* Finding cards */
 .finding-card {
-    background: #1a1a24;
-    border: 1px solid #2a2a38;
-    border-left-width: 3px;
-    border-radius: 5px;
-    padding: 16px 18px;
-    margin-bottom: 10px;
+    background: #1a1a24; border: 1px solid #2a2a38;
+    border-left-width: 3px; border-radius: 5px;
+    padding: 16px 18px; margin-bottom: 10px;
 }
 .finding-agent {
     font-family: 'IBM Plex Serif', serif;
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 3px;
+    font-size: 1rem; font-weight: 600; margin-bottom: 3px;
 }
 .finding-algo {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.63rem;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #5a5a78;
-    margin-bottom: 9px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.63rem;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: #5a5a78; margin-bottom: 9px;
 }
-.finding-desc {
-    font-size: 0.86rem;
-    color: #8a8aa8;
-    line-height: 1.65;
-}
+.finding-desc { font-size: 0.86rem; color: #8a8aa8; line-height: 1.65; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Color palette — soft, muted, distinguishable ──────────────────────────────
+# ── Colors ────────────────────────────────────────────────────────────────────
 
 AGENT_COLORS = {
     'walmart':      '#7eb8d4',
@@ -224,10 +156,9 @@ ALGO_LABELS = {
     'A2CAgent': 'A2C', 'QTableAgent': 'Q-Table',
 }
 
-def plotly_layout(**overrides):
+def plotly_layout(**kw):
     base = dict(
-        paper_bgcolor='#13131a',
-        plot_bgcolor='#1a1a24',
+        paper_bgcolor='#13131a', plot_bgcolor='#1a1a24',
         font=dict(family='IBM Plex Sans', color='#a0a0b8', size=12),
         xaxis=dict(gridcolor='#22222e', linecolor='#2a2a38',
                    zerolinecolor='#2a2a38', tickfont=dict(size=11, color='#7a7a98')),
@@ -240,29 +171,30 @@ def plotly_layout(**overrides):
                         font=dict(family='IBM Plex Sans', size=12, color='#d4d4e0')),
         title_font=dict(family='IBM Plex Serif', size=14, color='#c8c8e0'),
     )
-    base.update(overrides)
+    base.update(kw)
     return base
-
-# ── Data ──────────────────────────────────────────────────────────────────────
-
-@st.cache_data
-def load_data():
-    base = Path(__file__).parent / "results"
-    with open(base / "training_results.pkl", "rb") as f:
-        results = pickle.load(f)
-    df = pd.read_csv(base / "training_results.csv")
-    with open(base / "agent_meta.json") as f:
-        agent_meta = json.load(f)
-    return results, df, agent_meta
 
 def smooth(series, window=20):
     return pd.Series(series).rolling(window, min_periods=1).mean().values
 
+# ── Data loading (no pickle) ──────────────────────────────────────────────────
+
+@st.cache_data
+def load_data():
+    base = Path(__file__).parent / "results"
+    df   = pd.read_csv(base / "training_results.csv")
+    with open(base / "agent_meta.json") as f:
+        agent_meta = json.load(f)
+    with open(base / "episode_summaries.json") as f:
+        episodes = json.load(f)
+    return df, agent_meta, episodes
+
 try:
-    results, df, agent_meta = load_data()
+    df, agent_meta, episodes = load_data()
     data_ok = True
-except FileNotFoundError:
-    data_ok = False
+except FileNotFoundError as e:
+    data_ok  = False
+    load_err = str(e)
 
 AGENT_NAMES = list(agent_meta.keys()) if data_ok else []
 
@@ -279,7 +211,7 @@ with st.sidebar:
     </div>""", unsafe_allow_html=True)
 
     if data_ok:
-        n_eps = len(results)
+        n_eps = len(episodes)
         algos = list(set(v['algorithm'] for v in agent_meta.values()))
         st.markdown(f"""
         <div style='display:flex; flex-direction:column; gap:8px; margin-bottom:20px;'>
@@ -309,8 +241,7 @@ with st.sidebar:
 
     st.markdown("""
     <div style='margin-top:32px; font-family: IBM Plex Mono, monospace; font-size: 0.58rem;
-                color: #3a3a50; letter-spacing: 1px; text-transform: uppercase;
-                line-height: 1.9;'>
+                color: #3a3a50; letter-spacing: 1px; text-transform: uppercase; line-height: 1.9;'>
         NYU · Reinforcement Learning<br>Portfolio Project · 2026
     </div>""", unsafe_allow_html=True)
 
@@ -329,7 +260,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 if not data_ok:
-    st.error("Results files not found. Place training_results.pkl, training_results.csv, and agent_meta.json in the results/ directory.")
+    st.error(f"Results files not found: {load_err}")
     st.stop()
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -374,13 +305,16 @@ with tab1:
 
     with col_rank:
         st.markdown("<br><br>", unsafe_allow_html=True)
-        final = df[df['episode'] >= 450].groupby('agent')['revenue'].mean().sort_values(ascending=False)
+        final = (df[df['episode'] >= 450]
+                 .groupby('agent')['revenue'].mean()
+                 .sort_values(ascending=False))
         st.markdown("""
         <div style='font-family: IBM Plex Mono, monospace; font-size: 0.62rem;
                     letter-spacing: 2px; text-transform: uppercase; color: #4a4a60;
-                    margin-bottom: 12px;'>Final 50 eps avg</div>""", unsafe_allow_html=True)
+                    margin-bottom: 12px;'>Final 50 eps avg</div>""",
+                    unsafe_allow_html=True)
         for i, (name, rev) in enumerate(final.items()):
-            color = AGENT_COLORS.get(name, '#a0a0b8')
+            color     = AGENT_COLORS.get(name, '#a0a0b8')
             val_color = '#c8c8e0' if i == 0 else '#7a7a98'
             st.markdown(f"""
             <div style='display:flex; justify-content:space-between; align-items:center;
@@ -397,9 +331,7 @@ with tab1:
     for name in AGENT_NAMES:
         shares = df[df['agent'] == name]['market_share'].values
         fig2.add_trace(go.Scatter(
-            x=list(range(len(shares))),
-            y=smooth(shares, w),
-            name=name,
+            x=list(range(len(shares))), y=smooth(shares, w), name=name,
             line=dict(color=AGENT_COLORS.get(name, '#a0a0b8'), width=1.8),
             hovertemplate=f"<b>{name}</b><br>Ep %{{x}} · %{{y:.3f}}<extra></extra>",
         ))
@@ -447,10 +379,8 @@ with tab1:
         changes    = [pct_chg.get(n, 0) for n in AGENT_NAMES]
         bar_colors = ['#7ec4a0' if c >= 0 else '#c4907e' for c in changes]
         fig4 = go.Figure(go.Bar(
-            x=AGENT_NAMES, y=changes,
-            marker_color=bar_colors, opacity=0.85,
-            text=[f"{c:.0f}%" for c in changes],
-            textposition='outside',
+            x=AGENT_NAMES, y=changes, marker_color=bar_colors, opacity=0.85,
+            text=[f"{c:.0f}%" for c in changes], textposition='outside',
             textfont=dict(size=10, color='#7a7a98', family='IBM Plex Mono'),
         ))
         fig4.add_hline(y=0, line_color='#2a2a3c', line_width=1)
@@ -470,7 +400,7 @@ with tab2:
     st.markdown("<div class='section-title'>Revenue by Algorithm Group</div>",
                 unsafe_allow_html=True)
 
-    w2   = st.slider("Smoothing window", 5, 50, 20, key="s2")
+    w2    = st.slider("Smoothing window", 5, 50, 20, key="s2")
     algos = ['DQNAgent', 'PPOAgent', 'A2CAgent', 'QTableAgent']
     cols  = st.columns(2)
 
@@ -481,8 +411,7 @@ with tab2:
             for name in algo_agents:
                 revs = df[df['agent'] == name]['revenue'].values
                 fig.add_trace(go.Scatter(
-                    x=list(range(len(revs))),
-                    y=smooth(revs, w2),
+                    x=list(range(len(revs))), y=smooth(revs, w2),
                     name=f"{name} · {agent_meta[name]['reward_fn']}",
                     line=dict(color=AGENT_COLORS.get(name, '#a0a0b8'), width=2),
                     hovertemplate=f"<b>{name}</b><br>$%{{y:,.0f}}<extra></extra>",
@@ -504,7 +433,8 @@ with tab2:
         fig_c = go.Figure()
         for algo in algos:
             agents_in = [n for n, m in agent_meta.items() if m['algorithm'] == algo]
-            all_r     = np.array([df[df['agent'] == n]['total_reward'].values for n in agents_in])
+            all_r     = np.array([df[df['agent'] == n]['total_reward'].values
+                                  for n in agents_in])
             mean_r    = all_r.mean(axis=0)
             normed    = (mean_r - mean_r.min()) / (mean_r.max() - mean_r.min() + 1e-8)
             fig_c.add_trace(go.Scatter(
@@ -523,7 +453,8 @@ with tab2:
         fig_s = go.Figure()
         for algo in algos:
             agents_in = [n for n, m in agent_meta.items() if m['algorithm'] == algo]
-            all_r     = np.array([df[df['agent'] == n]['total_reward'].values for n in agents_in])
+            all_r     = np.array([df[df['agent'] == n]['total_reward'].values
+                                  for n in agents_in])
             mean_r    = all_r.mean(axis=0)
             roll_std  = pd.Series(mean_r).rolling(50, min_periods=50).std().values
             fig_s.add_trace(go.Scatter(
@@ -584,15 +515,13 @@ with tab3:
                 x=[x], y=[y], mode='markers+text', name=name,
                 marker=dict(color=AGENT_COLORS.get(name, '#a0a0b8'), size=13,
                             line=dict(color='#13131a', width=2)),
-                text=[f"  {name}"],
-                textposition='middle right',
+                text=[f"  {name}"], textposition='middle right',
                 textfont=dict(size=10, family='IBM Plex Sans', color='#8a8aaa'),
                 hovertemplate=(
                     f"<b>{name}</b><br>"
                     f"Algorithm: {ALGO_LABELS.get(agent_meta[name]['algorithm'], '')}<br>"
                     f"Reward fn: {agent_meta[name]['reward_fn']}<br>"
-                    f"Revenue: $%{{x:,.0f}}<br>"
-                    f"Reward: %{{y:,.0f}}<extra></extra>"
+                    f"Revenue: $%{{x:,.0f}}<br>Reward: %{{y:,.0f}}<extra></extra>"
                 ),
             ))
         fig_d1.update_layout(**plotly_layout(
@@ -612,12 +541,10 @@ with tab3:
                 x=[x], y=[y], mode='markers+text', name=name,
                 marker=dict(color=AGENT_COLORS.get(name, '#a0a0b8'), size=13,
                             line=dict(color='#13131a', width=2)),
-                text=[f"  {name}"],
-                textposition='middle right',
+                text=[f"  {name}"], textposition='middle right',
                 textfont=dict(size=10, family='IBM Plex Sans', color='#8a8aaa'),
                 hovertemplate=(
-                    f"<b>{name}</b><br>"
-                    f"Revenue: $%{{x:,.0f}}<br>"
+                    f"<b>{name}</b><br>Revenue: $%{{x:,.0f}}<br>"
                     f"Market Share: %{{y:.4f}}<extra></extra>"
                 ),
             ))
@@ -655,26 +582,29 @@ with tab3:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — Episode Replay
+# TAB 4 — Episode Replay (from episode_summaries.json)
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tab4:
-    st.markdown("<div class='section-title'>Episode Replay — Day-by-Day Timeline</div>",
-                unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Episode Replay</div>", unsafe_allow_html=True)
 
     st.markdown("""
     <div class='callout'>
-        Scrub through any of the 500 training episodes to see how market share
-        and revenue evolved day-by-day across the 365-day simulation.
-        Episode 0 reflects early exploratory behavior; episode 499 shows trained policies.
+        Select any episode to see a breakdown of revenue, market share, and rewards
+        for each agent. Episode 0 reflects early exploratory behavior;
+        episode 499 shows trained policies.
     </div>""", unsafe_allow_html=True)
 
-    ep_sel = st.slider("Episode", 0, len(results) - 1, len(results) - 1, key="ep_sel")
-    sel    = results[ep_sel]
+    ep_sel = st.slider("Episode", 0, len(episodes) - 1, len(episodes) - 1, key="ep_sel")
+    sel    = episodes[ep_sel]
 
-    top_rev   = max(sel.revenues.items(), key=lambda x: x[1])
-    top_share = max(sel.market_shares.items(), key=lambda x: x[1])
-    total_rev = sum(sel.revenues.values())
+    revenues     = sel['revenues']
+    mkt_shares   = sel['market_shares']
+    tot_rewards  = sel['total_rewards']
+
+    top_rev   = max(revenues.items(),   key=lambda x: x[1])
+    top_share = max(mkt_shares.items(), key=lambda x: x[1])
+    total_rev = sum(revenues.values())
 
     st.markdown(f"""
     <div class='metric-row'>
@@ -688,91 +618,100 @@ with tab4:
         </div>
         <div class='metric-card'>
             <div class='metric-value'
-                 style='color:{AGENT_COLORS.get(top_rev[0],"#b0b0c8")};'>{top_rev[0]}</div>
+                 style='color:{AGENT_COLORS.get(top_rev[0], "#b0b0c8")};'>
+                {top_rev[0]}</div>
             <div class='metric-label'>Revenue Leader · ${top_rev[1]/1e6:.1f}M</div>
         </div>
         <div class='metric-card'>
             <div class='metric-value'
-                 style='color:{AGENT_COLORS.get(top_share[0],"#b0b0c8")};'>{top_share[0]}</div>
+                 style='color:{AGENT_COLORS.get(top_share[0], "#b0b0c8")};'>
+                {top_share[0]}</div>
             <div class='metric-label'>Share Leader · {top_share[1]:.3f}</div>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    metrics    = (sel.episode_metrics
-                  if hasattr(sel, 'episode_metrics') and sel.episode_metrics else None)
-    id_to_name = {i: n for i, n in enumerate(AGENT_NAMES)}
+    col9, col10 = st.columns(2)
 
-    if metrics and len(metrics) > 0:
-        days      = [m['day'] for m in metrics]
-        agent_ids = list(metrics[0]['market_shares'].keys())
-
-        col9, col10 = st.columns(2)
-        with col9:
-            fig_r1 = go.Figure()
-            for aid in agent_ids:
-                name   = id_to_name.get(aid, str(aid))
-                shares = [m['market_shares'].get(aid, 0) for m in metrics]
-                fig_r1.add_trace(go.Scatter(
-                    x=days, y=smooth(shares, 14), name=name,
-                    line=dict(color=AGENT_COLORS.get(name, '#a0a0b8'), width=1.8),
-                    hovertemplate=f"<b>{name}</b><br>Day %{{x}} · %{{y:.3f}}<extra></extra>",
-                ))
-            fig_r1.update_layout(**plotly_layout(
-                height=340, hovermode='x unified',
-                title_text=f"Market Share — Episode {ep_sel} (14-day avg)",
-                xaxis_title="Day of Year", yaxis_title="Market Share",
-            ))
-            st.plotly_chart(fig_r1, use_container_width=True)
-
-        with col10:
-            fig_r2 = go.Figure()
-            for aid in agent_ids:
-                name    = id_to_name.get(aid, str(aid))
-                revs    = [m['revenues'].get(aid, 0) for m in metrics]
-                fig_r2.add_trace(go.Scatter(
-                    x=days, y=np.cumsum(revs), name=name,
-                    line=dict(color=AGENT_COLORS.get(name, '#a0a0b8'), width=1.8),
-                    hovertemplate=f"<b>{name}</b><br>Day %{{x}} · $%{{y:,.0f}}<extra></extra>",
-                ))
-            fig_r2.update_layout(**plotly_layout(
-                height=340, hovermode='x unified',
-                title_text=f"Cumulative Revenue — Episode {ep_sel}",
-                xaxis_title="Day of Year", yaxis_title="Cumulative Revenue ($)",
-            ))
-            st.plotly_chart(fig_r2, use_container_width=True)
-
-        total_demand = [m['total_demand'] for m in metrics]
-        fig_dem = go.Figure()
-        fig_dem.add_trace(go.Scatter(
-            x=days, y=total_demand, name='Daily',
-            line=dict(color='#2a2a3c', width=1),
-            fill='tozeroy', fillcolor='rgba(160,168,192,0.05)',
-        ))
-        fig_dem.add_trace(go.Scatter(
-            x=days, y=smooth(total_demand, 14), name='14-day avg',
-            line=dict(color='#a0a8c0', width=2),
-        ))
-        fig_dem.update_layout(**plotly_layout(
-            height=260,
-            title_text="Daily Market Demand",
-            xaxis_title="Day of Year", yaxis_title="Units Sold",
-        ))
-        st.plotly_chart(fig_dem, use_container_width=True)
-
-    else:
-        fig_bar = go.Figure(go.Bar(
-            x=list(sel.revenues.keys()),
-            y=list(sel.revenues.values()),
-            marker_color=[AGENT_COLORS.get(n, '#a0a0b8') for n in sel.revenues],
+    # Revenue bar chart
+    with col9:
+        sorted_rev = sorted(revenues.items(), key=lambda x: x[1], reverse=True)
+        fig_rev = go.Figure(go.Bar(
+            x=[n for n, _ in sorted_rev],
+            y=[v for _, v in sorted_rev],
+            marker_color=[AGENT_COLORS.get(n, '#a0a0b8') for n, _ in sorted_rev],
             opacity=0.85,
             hovertemplate="%{x}<br>$%{y:,.0f}<extra></extra>",
         ))
-        fig_bar.update_layout(**plotly_layout(
+        fig_rev.update_layout(**plotly_layout(
             height=340,
             title_text=f"Revenue by Agent — Episode {ep_sel}",
-            xaxis_tickangle=-40,
+            xaxis_tickangle=-40, yaxis_title="Revenue ($)",
         ))
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_rev, use_container_width=True)
+
+    # Market share bar chart
+    with col10:
+        sorted_share = sorted(mkt_shares.items(), key=lambda x: x[1], reverse=True)
+        fig_share = go.Figure(go.Bar(
+            x=[n for n, _ in sorted_share],
+            y=[v for _, v in sorted_share],
+            marker_color=[AGENT_COLORS.get(n, '#a0a0b8') for n, _ in sorted_share],
+            opacity=0.85,
+            hovertemplate="%{x}<br>%{y:.4f}<extra></extra>",
+        ))
+        fig_share.update_layout(**plotly_layout(
+            height=340,
+            title_text=f"Market Share by Agent — Episode {ep_sel}",
+            xaxis_tickangle=-40, yaxis_title="Market Share",
+        ))
+        st.plotly_chart(fig_share, use_container_width=True)
+
+    # Reward vs revenue scatter for this episode
+    fig_ep = go.Figure()
+    for name in AGENT_NAMES:
+        fig_ep.add_trace(go.Scatter(
+            x=[revenues.get(name, 0)],
+            y=[tot_rewards.get(name, 0)],
+            mode='markers+text',
+            name=name,
+            marker=dict(color=AGENT_COLORS.get(name, '#a0a0b8'), size=13,
+                        line=dict(color='#13131a', width=2)),
+            text=[f"  {name}"], textposition='middle right',
+            textfont=dict(size=10, family='IBM Plex Sans', color='#8a8aaa'),
+            hovertemplate=f"<b>{name}</b><br>Revenue: $%{{x:,.0f}}<br>Reward: %{{y:,.0f}}<extra></extra>",
+        ))
+    fig_ep.update_layout(**plotly_layout(
+        height=360, showlegend=False,
+        title_text=f"Reward vs Revenue — Episode {ep_sel}",
+        xaxis_title="Revenue ($)", yaxis_title="Total Reward",
+    ))
+    st.plotly_chart(fig_ep, use_container_width=True)
+
+    # Episode-over-episode context: show where this ep sits in training
+    st.markdown("<div class='section-title'>Context — How This Episode Compares</div>",
+                unsafe_allow_html=True)
+
+    fig_ctx = go.Figure()
+    for name in AGENT_NAMES:
+        revs = df[df['agent'] == name]['revenue'].values
+        fig_ctx.add_trace(go.Scatter(
+            x=list(range(len(revs))), y=smooth(revs, 20), name=name,
+            line=dict(color=AGENT_COLORS.get(name, '#a0a0b8'), width=1.5),
+            opacity=0.5,
+            hovertemplate=f"<b>{name}</b><br>Ep %{{x}} · $%{{y:,.0f}}<extra></extra>",
+        ))
+    fig_ctx.add_vline(x=ep_sel, line_color='#c8c8e0', line_width=1.5, line_dash='dash')
+    fig_ctx.add_annotation(
+        x=ep_sel, y=1.02, yref='paper',
+        text=f"  ep {ep_sel}", showarrow=False,
+        font=dict(color='#c8c8e0', size=10, family='IBM Plex Mono'),
+    )
+    fig_ctx.update_layout(**plotly_layout(
+        height=300, hovermode='x unified',
+        title_text="Selected Episode in Training Context",
+        xaxis_title="Episode", yaxis_title="Revenue ($)",
+    ))
+    st.plotly_chart(fig_ctx, use_container_width=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -807,10 +746,10 @@ with tab5:
         </div>
     </div>""", unsafe_allow_html=True)
 
-    final_a   = adf[adf['episode'] >= 450]
-    early_a   = adf[adf['episode'] < 50]
-    rev_chg   = ((final_a['revenue'].mean() - early_a['revenue'].mean())
-                 / max(early_a['revenue'].mean(), 1) * 100)
+    final_a = adf[adf['episode'] >= 450]
+    early_a = adf[adf['episode'] < 50]
+    rev_chg = ((final_a['revenue'].mean() - early_a['revenue'].mean())
+               / max(early_a['revenue'].mean(), 1) * 100)
 
     st.markdown(f"""
     <div class='metric-row'>
@@ -836,8 +775,8 @@ with tab5:
 
     col11, col12 = st.columns(2)
     with col11:
-        fig_a1 = go.Figure()
         r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+        fig_a1 = go.Figure()
         fig_a1.add_trace(go.Scatter(
             x=adf['episode'], y=smooth(adf['revenue'].values, w3),
             line=dict(color=color, width=2),
@@ -876,7 +815,7 @@ with tab5:
     st.markdown("<div class='section-title'>vs. The Field — Final 50 Episodes</div>",
                 unsafe_allow_html=True)
 
-    all_sum = df[df['episode'] >= 450].groupby('agent')[['revenue', 'market_share']].mean()
+    all_sum  = df[df['episode'] >= 450].groupby('agent')[['revenue', 'market_share']].mean()
     col13, col14 = st.columns(2)
 
     with col13:
