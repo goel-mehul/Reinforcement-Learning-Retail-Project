@@ -216,8 +216,13 @@ wandb/
 runs/
 *.pt
 *.pth
-results/
 .env
+
+# Keep dashboard data files
+!results/training_results.csv
+!results/agent_meta.json
+!results/episode_summaries.json
+!results/*.png
 
 # Jupyter
 .ipynb_checkpoints/
