@@ -10,12 +10,12 @@ agents:
     brand_loyalty_bonus: 0.08
 
   target:
-    algorithm: dqn
+    algorithm: ppo
     reward: profit_margin
     brand_loyalty_bonus: 0.06
 
   amazon_fresh:
-    algorithm: dqn
+    algorithm: a2c
     reward: market_share
     brand_loyalty_bonus: 0.05
 
@@ -30,18 +30,18 @@ agents:
     brand_loyalty_bonus: 0.05
 
   kroger:
-    algorithm: ppo
+    algorithm: a2c
     reward: promo_aware_profit
     brand_loyalty_bonus: 0.05
 
   trader_joes:
-    algorithm: a2c
+    algorithm: dqn
     reward: premium_floor
     brand_loyalty_bonus: 0.10
     price_floor_pct: 0.85      # never price below 85% of base retail
 
   whole_foods:
-    algorithm: a2c
+    algorithm: ppo
     reward: prestige_reward
     brand_loyalty_bonus: 0.12
     price_floor_pct: 0.90
