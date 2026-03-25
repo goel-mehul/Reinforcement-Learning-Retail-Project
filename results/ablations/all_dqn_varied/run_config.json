@@ -1,0 +1,9 @@
+{
+  "episodes": 200,
+  "seed": 42,
+  "no_opponent_encoder": false,
+  "force_algo": "DQN",
+  "force_reward": null,
+  "config": "config/agent_config.yaml",
+  "timestamp": "2026-03-25T02:38:43"
+}

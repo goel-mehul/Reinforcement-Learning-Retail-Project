@@ -49,8 +49,8 @@ def parse_args():
                    help="Random seed for reproducibility (default: 42)")
     p.add_argument("--out",       type=str, default="results",
                    help="Output directory for results (default: results/)")
-    p.add_argument("--config",    type=str, default="config/config.yaml",
-                   help="Path to YAML config (default: config/config.yaml)")
+    p.add_argument("--config",    type=str, default="config/agent_config.yaml",
+                   help="Path to YAML config (default: config/agent_config.yaml)")
 
     # Ablation flags
     p.add_argument("--no-opponent-encoder", action="store_true",
@@ -101,59 +101,51 @@ DEFAULT_AGENT_CONFIG = {
 }
 
 def build_agents(env, args, config: dict) -> dict:
-    """Construct all agents according to config and ablation flags."""
-    from agents.dqn.dqn_agent     import DQNAgent
-    from agents.ppo.ppo_agent     import PPOAgent
-    from agents.a2c.a2c_agent     import A2CAgent
+    """Construct all agents according to config and ablation flags.
+
+    All agents share the same constructor signature:
+        (agent_id, agent_name, obs_size, n_products, reward_fn, config, seed)
+    """
+    from agents.dqn.dqn_agent       import DQNAgent
+    from agents.ppo.ppo_agent       import PPOAgent
+    from agents.a2c.a2c_agent       import A2CAgent
     from agents.qtable.qtable_agent import QTableAgent
 
-    obs_size    = env.observation_spaces[env.possible_agents[0]].shape[0]
-    action_size = env.action_spaces[env.possible_agents[0]].n
-    use_encoder = not args.no_opponent_encoder
+    obs_size   = env.observation_spaces[env.possible_agents[0]].shape[0]
+    n_products = 50   # fixed by environment
+
+    ALGO_MAP = {
+        "DQN":    DQNAgent,
+        "PPO":    PPOAgent,
+        "A2C":    A2CAgent,
+        "QTable": QTableAgent,
+    }
+
+    # config keys per algorithm (matches agent_config.yaml)
+    CONFIG_KEY = {
+        "DQN":    "dqn",
+        "PPO":    "ppo",
+        "A2C":    "a2c",
+        "QTable": "qtable",
+    }
 
     agents = {}
-    for name, cfg in DEFAULT_AGENT_CONFIG.items():
+    for i, (name, cfg) in enumerate(DEFAULT_AGENT_CONFIG.items()):
         algo      = args.force_algo   if args.force_algo   else cfg["algo"]
         reward_fn = args.force_reward if args.force_reward else cfg["reward_fn"]
 
-        # Q-Table stays tabular even under --force-algo unless explicitly overridden
-        if algo == "QTable":
-            agent = QTableAgent(
-                name=name,
-                obs_size=obs_size,
-                action_size=action_size,
-                reward_fn=reward_fn,
-                **config.get("qtable", {}),
-            )
-        elif algo == "DQN":
-            agent = DQNAgent(
-                name=name,
-                obs_size=obs_size,
-                action_size=action_size,
-                reward_fn=reward_fn,
-                use_opponent_encoder=use_encoder,
-                **config.get("dqn", {}),
-            )
-        elif algo == "PPO":
-            agent = PPOAgent(
-                name=name,
-                obs_size=obs_size,
-                action_size=action_size,
-                reward_fn=reward_fn,
-                use_opponent_encoder=use_encoder,
-                **config.get("ppo", {}),
-            )
-        elif algo == "A2C":
-            agent = A2CAgent(
-                name=name,
-                obs_size=obs_size,
-                action_size=action_size,
-                reward_fn=reward_fn,
-                use_opponent_encoder=use_encoder,
-                **config.get("a2c", {}),
-            )
-        else:
-            raise ValueError(f"Unknown algorithm: {algo}")
+        agent_class  = ALGO_MAP[algo]
+        agent_config = config.get(CONFIG_KEY[algo], {})
+
+        agent = agent_class(
+            agent_id   = i,
+            agent_name = name,
+            obs_size   = obs_size,
+            n_products = n_products,
+            reward_fn  = reward_fn,
+            config     = agent_config,
+            seed       = args.seed + i,   # offset seed per agent for diversity
+        )
 
         agents[name] = agent
 
@@ -229,6 +221,50 @@ def export_results(results, agents, out_dir: Path, args):
 
 # ── Progress reporting ────────────────────────────────────────────────────────
 
+def format_time(seconds: float) -> str:
+    """Format seconds into human-readable string."""
+    if seconds < 60:
+        return f"{seconds:.0f}s"
+    elif seconds < 3600:
+        return f"{seconds/60:.1f}m"
+    else:
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        return f"{h}h {m}m"
+
+
+def print_episode_progress(episode: int, n_episodes: int, result,
+                            ep_start: float, run_start: float):
+    """Print a single-line progress update after each episode."""
+    now        = time.time()
+    ep_time    = now - ep_start
+    elapsed    = now - run_start
+    eps_done   = episode + 1
+    eps_left   = n_episodes - eps_done
+    eta        = (elapsed / eps_done) * eps_left if eps_done > 0 else 0
+
+    # top revenue agent this episode
+    if result.revenues:
+        top_name, top_rev = max(result.revenues.items(), key=lambda x: x[1])
+        leader = f"{top_name} ${top_rev/1e6:.1f}M"
+    else:
+        leader = "—"
+
+    pct  = eps_done / n_episodes * 100
+    bar_filled = int(pct / 5)
+    bar  = "█" * bar_filled + "░" * (20 - bar_filled)
+
+    print(
+        f"  [{bar}] {pct:5.1f}%  "
+        f"ep {eps_done:>4}/{n_episodes}  "
+        f"ep_time {ep_time:.1f}s  "
+        f"elapsed {format_time(elapsed)}  "
+        f"ETA {format_time(eta)}  "
+        f"leader: {leader}",
+        flush=True,
+    )
+
+
 def print_summary(results, elapsed: float):
     """Print a clean summary table after training."""
     if not results:
@@ -236,7 +272,7 @@ def print_summary(results, elapsed: float):
 
     last50 = [r for r in results if r.episode >= len(results) - 50]
     print("\n" + "─" * 60)
-    print(f"  Training complete — {len(results)} episodes in {elapsed:.1f}s")
+    print(f"  Training complete — {len(results)} episodes in {format_time(elapsed)}")
     print("─" * 60)
     print(f"  {'Agent':<16} {'Avg Revenue':>14} {'Mkt Share':>12} {'Avg Reward':>13}")
     print("─" * 60)
@@ -315,8 +351,22 @@ def main():
 
     # Train
     start = time.time()
+    print(f"  Starting training...\n")
     try:
-        results = trainer.train(n_episodes=args.episodes)
+        results = []
+        for episode in range(args.episodes):
+            ep_start = time.time()
+            result   = trainer._run_episode(episode, training=True)
+            trainer.episode_results.append(result)
+            results.append(result)
+
+            if not args.quiet:
+                print_episode_progress(episode, args.episodes, result,
+                                       ep_start, start)
+
+            if (episode + 1) % args.save_every == 0:
+                trainer._save_checkpoints(episode)
+
     except KeyboardInterrupt:
         print("\n\n  [interrupted] Saving partial results...")
         results = trainer.episode_results

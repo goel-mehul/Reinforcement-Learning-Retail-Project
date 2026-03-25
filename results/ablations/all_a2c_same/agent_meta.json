@@ -1,0 +1,42 @@
+{
+  "walmart": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "target": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "amazon_fresh": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "qfc": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "safeway": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "kroger": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "trader_joes": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "whole_foods": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "aldi": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  },
+  "costco": {
+    "algorithm": "A2CAgent",
+    "reward_fn": "pure_revenue"
+  }
+}

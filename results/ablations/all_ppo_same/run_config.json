@@ -1,0 +1,9 @@
+{
+  "episodes": 200,
+  "seed": 42,
+  "no_opponent_encoder": false,
+  "force_algo": "PPO",
+  "force_reward": "pure_revenue",
+  "config": "config/agent_config.yaml",
+  "timestamp": "2026-03-25T12:55:06"
+}

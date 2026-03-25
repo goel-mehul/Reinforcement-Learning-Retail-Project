@@ -87,15 +87,15 @@ def run_experiment(label: str, out_dir: str, episodes: int, seed: int,
         "--episodes", str(episodes),
         "--seed",     str(seed),
         "--out",      out_dir,
-        "--quiet",
     ]
     if extra_flags:
         cmd.extend(extra_flags)
 
-    print(f"\n  Running: {label}")
-    print(f"  Command: {' '.join(cmd[2:])}")
+    print(f"\n{'═' * 60}")
+    print(f"  Experiment: {label}")
+    print(f"{'═' * 60}")
     result = subprocess.run(cmd, check=True)
-    print(f"  Done ✓")
+    print(f"\n  ✓ {label} complete")
     return Path(out_dir)
 
 
@@ -327,65 +327,43 @@ def main():
     if not args.skip_train:
         print("\n" + "═" * 60)
         print("  RetailRL Ablation Study")
-        print(f"  Episodes: {args.episodes}  Seed: {args.seed}")
+        print(f"  Episodes per run: {args.episodes}  Seed: {args.seed}")
+        print(f"  Total runs: 6  (~6-7 hours on M2 MacBook Air)")
         print("═" * 60)
 
-        # 1. Full model (baseline)
-        run_experiment(
-            "Baseline (full model)",
-            str(out / "baseline"),
-            args.episodes, args.seed,
-        )
+        import time
+        ablation_start = time.time()
+        experiments = [
+            ("1/6  Baseline (full model)",         str(out / "baseline"),            []),
+            ("2/6  No OpponentEncoder",             str(out / "no_encoder"),          ["--no-opponent-encoder"]),
+            ("3/6  All DQN, varied rewards",        str(out / "all_dqn_varied_reward"),["--force-algo", "DQN"]),
+            ("4/6  All DQN, pure_revenue",          str(out / "all_dqn_same_reward"), ["--force-algo", "DQN", "--force-reward", "pure_revenue"]),
+            ("5/6  All PPO, pure_revenue",          str(out / "all_ppo_same_reward"), ["--force-algo", "PPO", "--force-reward", "pure_revenue"]),
+            ("6/6  All A2C, pure_revenue",          str(out / "all_a2c_same_reward"), ["--force-algo", "A2C", "--force-reward", "pure_revenue"]),
+        ]
 
-        # 2. No OpponentEncoder
-        run_experiment(
-            "No OpponentEncoder",
-            str(out / "no_encoder"),
-            args.episodes, args.seed,
-            extra_flags=["--no-opponent-encoder"],
-        )
+        for i, (label, out_dir, flags) in enumerate(experiments):
+            run_experiment(label, out_dir, args.episodes, args.seed,
+                           extra_flags=flags if flags else None)
 
-        # 3. All DQN, varied rewards (isolate reward effect)
-        run_experiment(
-            "All DQN, varied rewards",
-            str(out / "all_dqn_varied_reward"),
-            args.episodes, args.seed,
-            extra_flags=["--force-algo", "DQN"],
-        )
-
-        # 4. All DQN, all pure_revenue (isolate algo effect baseline)
-        run_experiment(
-            "All DQN, pure_revenue",
-            str(out / "all_dqn_same_reward"),
-            args.episodes, args.seed,
-            extra_flags=["--force-algo", "DQN", "--force-reward", "pure_revenue"],
-        )
-
-        # 5. All PPO, pure_revenue
-        run_experiment(
-            "All PPO, pure_revenue",
-            str(out / "all_ppo_same_reward"),
-            args.episodes, args.seed,
-            extra_flags=["--force-algo", "PPO", "--force-reward", "pure_revenue"],
-        )
-
-        # 6. All A2C, pure_revenue
-        run_experiment(
-            "All A2C, pure_revenue",
-            str(out / "all_a2c_same_reward"),
-            args.episodes, args.seed,
-            extra_flags=["--force-algo", "A2C", "--force-reward", "pure_revenue"],
-        )
+            # print overall ETA after each experiment completes
+            elapsed   = time.time() - ablation_start
+            done      = i + 1
+            remaining = len(experiments) - done
+            eta       = (elapsed / done) * remaining
+            h, m      = int(eta // 3600), int((eta % 3600) // 60)
+            print(f"\n  Overall: {done}/{len(experiments)} experiments done  "
+                  f"— {h}h {m}m remaining\n")
 
     # ── Load results ─────────────────────────────────────────────────────────
 
     print("\n  Loading results...")
     df_baseline,    _ = load_run(out / "baseline")
     df_no_encoder,  _ = load_run(out / "no_encoder")
-    df_dqn_varied,  _ = load_run(out / "all_dqn_varied_reward")
-    df_dqn_same,    _ = load_run(out / "all_dqn_same_reward")
-    df_ppo_same,    _ = load_run(out / "all_ppo_same_reward")
-    df_a2c_same,    _ = load_run(out / "all_a2c_same_reward")
+    df_dqn_varied,  _ = load_run(out / "all_dqn_varied")
+    df_dqn_same,    _ = load_run(out / "all_dqn_same")
+    df_ppo_same,    _ = load_run(out / "all_ppo_same")
+    df_a2c_same,    _ = load_run(out / "all_a2c_same")
 
     # ── Plots ─────────────────────────────────────────────────────────────────
 
@@ -410,12 +388,12 @@ def main():
 
     # Summary table
     all_runs = {
-        "baseline":         df_baseline,
-        "no_encoder":       df_no_encoder,
-        "all_dqn_varied":   df_dqn_varied,
-        "all_dqn_same":     df_dqn_same,
-        "all_ppo_same":     df_ppo_same,
-        "all_a2c_same":     df_a2c_same,
+        "baseline":       df_baseline,
+        "no_encoder":     df_no_encoder,
+        "all_dqn_varied": df_dqn_varied,
+        "all_dqn_same":   df_dqn_same,
+        "all_ppo_same":   df_ppo_same,
+        "all_a2c_same":   df_a2c_same,
     }
     build_summary_table(all_runs, out / "ablation_summary.csv")
 

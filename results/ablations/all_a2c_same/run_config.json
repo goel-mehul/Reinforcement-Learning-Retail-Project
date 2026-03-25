@@ -1,0 +1,9 @@
+{
+  "episodes": 200,
+  "seed": 42,
+  "no_opponent_encoder": false,
+  "force_algo": "A2C",
+  "force_reward": "pure_revenue",
+  "config": "config/agent_config.yaml",
+  "timestamp": "2026-03-25T17:28:30"
+}

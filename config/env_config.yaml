@@ -27,7 +27,7 @@ products:
 
 # Demand model (Multinomial Logit)
 demand:
-  base_daily_customers: 10000   # total market size per day
+  base_daily_customers: 2000   # total market size per day
   price_sensitivity: 2.5        # higher = consumers more sensitive to price
   brand_loyalty: 0.59          # probability consumer ignores price and stays loyal
   mean_basket_size: 10         # added — from real data
