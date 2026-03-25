@@ -44,6 +44,50 @@ Interactive 5-tab dashboard showing:
 
 ---
 
+## Baselines
+
+Before training any RL agents, the environment was validated using three rule-based agents run in isolation across 50 episodes (see `notebooks/02_env_validation.ipynb`).
+
+| Agent | Strategy | Avg Revenue | Avg Market Share |
+|---|---|---|---|
+| RandomAgent | Random price multiplier each day | ~$1.2M | ~10% |
+| FixedMarginAgent | Always hold price at base | ~$3.1M | ~10% |
+| AlwaysCheapestAgent | Always undercut competitor average | ~$4.8M | ~10% |
+
+With rule-based agents, market share splits evenly at ~10% per store — no agent learns to differentiate. RL agents break this symmetry: revenue-focused agents reach **$7.5M+** while non-revenue agents develop genuinely different strategies. The best rule-based agent (AlwaysCheapest at $4.8M) is beaten by the top RL agents by **57%**.
+
+---
+
+## Analysis & Ablations
+
+All plots generated from 500-episode training data via `python -m retailrl.make_ablation_plots`.
+
+### Algorithm Convergence
+
+![Algorithm Convergence](results/ablations/algo_convergence.png)
+
+DQN agents start high ($20M+) and converge down as competition intensifies. PPO and A2C agents with non-revenue objectives stabilize quickly — they're succeeding on their own terms. Q-Table agents are noisiest but find competitive performance for revenue objectives.
+
+### Reward Function Drives Strategy
+
+![Reward Divergence](results/ablations/reward_divergence.png)
+
+Same competitive environment, same algorithms — reward function design determines behavior. Costco (Q-Table + bulk_volume) achieves high reward at high revenue. Whole Foods (PPO + prestige_reward) achieves high reward at near-zero revenue, intentionally pricing above market average. These strategies emerged from the reward signal alone.
+
+### Competitive Pressure
+
+![Competitive Pressure](results/ablations/competitive_pressure.png)
+
+9 of 10 agents declined in revenue from early to late training — direct evidence of competitive learning. Whole Foods dropped 51% (can't cut prices due to prestige reward). Walmart dropped 46% (competitors learned to undercut it). Costco is the only agent to grow (+25%), having found a bulk-volume niche that was hard to compete with on price alone.
+
+### Algorithm Final Performance
+
+![Algorithm Comparison](results/ablations/algo_comparison.png)
+
+DQN leads revenue at $7.56M because its agents have revenue-focused reward functions. Q-Table follows at $6.80M. PPO and A2C appear lower because those agents optimize prestige, LTV, and promo-profit — not revenue. The stability chart shows DQN and Q-Table variance dropping sharply after episode 50 as policies converge.
+
+---
+
 ## Architecture
 
 ### Environment
@@ -103,28 +147,28 @@ Reinforcement-Learning-Retail-Project/
 │   └── retail_env.py          # Custom multi-agent env (716-dim obs, MNL demand)
 ├── agents/
 │   ├── opponent_encoder.py    # Shared OpponentEncoder module
-│   ├── dqn/
-│   │   └── dqn_agent.py       # DQN with experience replay + opponent modeling
-│   ├── ppo/
-│   │   └── ppo_agent.py       # PPO actor-critic + opponent modeling
-│   ├── a2c/
-│   │   └── a2c_agent.py       # A2C + opponent modeling
-│   └── qtable/
-│       └── qtable_agent.py    # Tabular Q-learning baseline
-├── utils/
-│   └── trainer.py             # Multi-agent training loop
+│   ├── dqn/dqn_agent.py       # DQN with experience replay + opponent modeling
+│   ├── ppo/ppo_agent.py       # PPO actor-critic + opponent modeling
+│   ├── a2c/a2c_agent.py       # A2C + opponent modeling
+│   └── qtable/qtable_agent.py # Tabular Q-learning baseline
+├── utils/trainer.py           # Multi-agent training loop
+├── retailrl/
+│   ├── train.py               # CLI training script
+│   ├── run_ablations.py       # Ablation study runner
+│   └── make_ablation_plots.py # Plot generation from training data
 ├── config/
-│   └── config.yaml            # Hyperparameters and environment settings
+│   ├── agent_config.yaml      # Agent algorithm + reward function assignments
+│   └── env_config.yaml        # Environment hyperparameters
 ├── notebooks/
-│   ├── 01_eda.ipynb            # Environment exploration
+│   ├── 01_eda_instacart.ipynb  # Environment + data exploration
 │   ├── 02_env_validation.ipynb # Rule-based agent baselines
-│   ├── 03_training.ipynb       # 500-episode training run + Phase 6 analysis
-│   └── 04_results_analysis.ipynb
+│   └── 03_training.ipynb       # 500-episode training run + analysis
 ├── results/
 │   ├── training_results.csv    # Per-agent per-episode metrics
 │   ├── agent_meta.json         # Algorithm and reward function metadata
 │   ├── episode_summaries.json  # Per-episode revenue/share/reward summaries
-│   └── *.png                   # Training curve plots
+│   └── ablations/              # Ablation study plots
+├── tests/                      # pytest suite (8 test files)
 ├── dashboard.py                # Streamlit interactive dashboard
 ├── requirements.txt
 └── pyproject.toml
@@ -145,6 +189,7 @@ conda activate retailrl
 
 # Install
 pip install -e ".[dev]"
+pip install gymnasium torch
 ```
 
 ### Run the dashboard locally
@@ -156,7 +201,19 @@ streamlit run dashboard.py
 
 ### Run training
 
+**Via CLI (recommended):**
+```bash
+python -m retailrl.train --episodes 500 --seed 42
+```
+
+**Via notebook:**
 Open `notebooks/03_training.ipynb` and run all cells. Training 500 episodes with 2,000 customers takes approximately 60–70 minutes on a MacBook Air M2.
+
+### Reproduce ablation plots
+
+```bash
+python -m retailrl.make_ablation_plots --data results/training_results.csv --out results/ablations
+```
 
 ---
 
@@ -164,41 +221,15 @@ Open `notebooks/03_training.ipynb` and run all cells. Training 500 episodes with
 
 The trained results are already committed to `results/` so the dashboard works out of the box. To retrain from scratch:
 
-```python
-# In notebooks/03_training.ipynb
+```bash
+# Full 500-episode run
+python -m retailrl.train --episodes 500 --seed 42 --out results/
 
-results = []
-for ep in range(500):
-    result = trainer._run_episode(ep, training=True)
-    results.append(result)
+# Quick 5-episode smoke test
+python -m retailrl.train --episodes 5 --seed 42
 ```
 
-After training, regenerate the results files:
-
-```python
-import json, pandas as pd
-
-# Save CSV
-rows = []
-for i, r in enumerate(results):
-    for name in env.AGENT_NAMES:
-        rows.append({
-            "episode": i, "agent": name,
-            "algorithm": agents[name].__class__.__name__,
-            "reward_fn": agents[name].reward_fn,
-            "revenue": r.revenues.get(name, 0),
-            "market_share": r.market_shares.get(name, 0),
-            "total_reward": r.total_rewards.get(name, 0),
-        })
-pd.DataFrame(rows).to_csv('results/training_results.csv', index=False)
-
-# Save episode summaries
-summaries = [{"episode": i, "revenues": r.revenues,
-              "market_shares": r.market_shares, "total_rewards": r.total_rewards}
-             for i, r in enumerate(results)]
-with open('results/episode_summaries.json', 'w') as f:
-    json.dump(summaries, f)
-```
+Results are saved automatically in the exact format the dashboard expects: `training_results.csv`, `agent_meta.json`, and `episode_summaries.json`.
 
 ---
 
@@ -209,7 +240,7 @@ with open('results/episode_summaries.json', 'w') as f:
 | RL & Training | PyTorch, custom DQN/PPO/A2C/Q-Table implementations |
 | Environment | gymnasium, numpy, scipy (MNL demand model) |
 | Data | pandas, PyYAML |
-| Visualization | Streamlit, Plotly |
+| Visualization | Streamlit, Plotly, matplotlib |
 | Dev | pytest, black, ruff, pyproject.toml |
 
 ---
@@ -220,7 +251,7 @@ This project was built as part of an NYU Reinforcement Learning course with the 
 
 The most interesting finding wasn't algorithmic — it was about **reward function design**. The agents that look "bad" on a revenue leaderboard (Whole Foods, Amazon Fresh, Safeway) are actually succeeding on their own terms. Whole Foods with a prestige reward learned to price at a premium without any explicit instruction to do so. Amazon Fresh with a market share reward learned to undercut everyone, accepting near-zero revenue. These behaviors emerged purely from the reward signal interacting with a competitive environment — which is exactly what you'd want from a well-designed RL system.
 
-The opponent modeling module (OpponentEncoder) made a measurable difference in how quickly DQN and PPO agents learned to respond to competitor price changes rather than just reacting to their own outcomes.
+The opponent modeling module (OpponentEncoder) gave DQN and PPO agents a dedicated representational pathway for competitor behavior — rather than mixing 450 competitor price dimensions into the backbone MLP, the encoder produces a focused 64-dim embedding of "what competitors are doing right now."
 
 ---
 
