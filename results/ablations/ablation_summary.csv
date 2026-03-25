@@ -1,0 +1,11 @@
+agent,algorithm,reward_fn,avg_revenue,avg_mkt_share,avg_reward,revenue_change
+trader_joes,DQNAgent,premium_floor,"$7,608,193",0.2519,"-52,375,083",-41.9%
+walmart,DQNAgent,pure_revenue,"$7,515,823",0.2488,"1,298,527,609",-46.0%
+costco,QTableAgent,bulk_volume,"$7,263,360",0.2409,"1,605,398,145",+25.2%
+qfc,QTableAgent,revenue_with_inventory,"$6,341,964",0.2104,"1,094,716,440",-38.9%
+target,PPOAgent,profit_margin,"$483,692",0.0140,"57,249,971",-15.2%
+aldi,A2CAgent,discount_maximization,"$309,910",0.0084,"90,091,604",-45.8%
+whole_foods,PPOAgent,prestige_reward,"$300,950",0.0081,"41,390,685",-50.9%
+safeway,PPOAgent,long_term_value,"$283,442",0.0076,"82,881,146",-44.9%
+kroger,A2CAgent,promo_aware_profit,"$233,983",0.0060,"40,771,099",-18.0%
+amazon_fresh,A2CAgent,market_share,"$166,972",0.0040,"497,298",-44.2%
